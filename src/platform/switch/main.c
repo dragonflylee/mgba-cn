@@ -847,6 +847,7 @@ int main(int argc, char* argv[]) {
 
 	socketInitializeDefault();
 	nxlinkStdio();
+	plInitialize(PlServiceType_User);
 	eglInit();
 	romfsInit();
 	audoutInitialize();
@@ -890,7 +891,7 @@ int main(int argc, char* argv[]) {
 	struct mGUIRunner runner = {
 		.params = {
 			1280, 720,
-			font, "/",
+			font, "sdmc:/switch",
 			_drawStart, _drawEnd,
 			_pollInput, _pollCursor,
 			_batteryState,
@@ -899,7 +900,7 @@ int main(int argc, char* argv[]) {
 		},
 		.keySources = (struct GUIInputKeys[]) {
 			{
-				.name = "Controller Input",
+				.name = "手柄键位",
 				.id = AUTO_INPUT,
 				.keyNames = (const char*[]) {
 					"A",
@@ -935,19 +936,19 @@ int main(int argc, char* argv[]) {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"Pixel-Accurate",
-					"Aspect-Ratio Fit",
-					"Stretched",
+					"像素精确",
+					"等比例自适应",
+					"平铺",
 				},
 				.nStates = 3
 			},
 			{
-				.title = "Fast forward cap",
+				.title = "跳帧",
 				.data = GUI_V_S("fastForwardCap"),
 				.submenu = 0,
 				.state = 7,
@@ -977,18 +978,18 @@ int main(int argc, char* argv[]) {
 				.nStates = 16
 			},
 			{
-				.title = "Filtering",
+				.title = "滤镜",
 				.data = GUI_V_S("filterMode"),
 				.submenu = 0,
 				.state = FM_NEAREST,
 				.validStates = (const char*[]) {
-					"None",
-					"Bilinear",
+					"无",
+					"双线性",
 				},
 				.nStates = 2
 			},
 			{
-				.title = "GPU-accelerated renderer",
+				.title = "GPU 硬件渲染",
 				.data = GUI_V_S("hwaccelVideo"),
 				.submenu = 0,
 				.state = 0,
@@ -999,7 +1000,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 2
 			},
 			{
-				.title = "Hi-res scaling (requires GPU rendering)",
+				.title = "高分辨率缩放 (需开启 GPU 渲染)",
 				.data = GUI_V_S("videoScale"),
 				.submenu = 0,
 				.state = 0,
@@ -1022,7 +1023,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 6
 			},
 			{
-				.title = "Use built-in brightness sensor for Boktai",
+				.title = "使用内置光线感应器",
 				.data = GUI_V_S("useLightSensor"),
 				.submenu = 0,
 				.state = illuminanceAvailable,
@@ -1105,6 +1106,7 @@ int main(int argc, char* argv[]) {
 	audoutExit();
 	romfsExit();
 	eglDeinit();
+	plExit();
 	socketExit();
 	return 0;
 }

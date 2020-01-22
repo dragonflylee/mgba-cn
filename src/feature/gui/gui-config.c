@@ -42,14 +42,14 @@ static bool _biosNamed(const char* name) {
 
 void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t nExtra) {
 	struct GUIMenu menu = {
-		.title = "Configure",
+		.title = "配置",
 		.index = 0,
 		.background = &runner->background.d
 	};
 	size_t i;
 	GUIMenuItemListInit(&menu.items, 0);
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Frameskip",
+		.title = "跳帧",
 		.data = GUI_V_S("frameskip"),
 		.submenu = 0,
 		.state = 0,
@@ -59,7 +59,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 10
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show framerate",
+		.title = "显示帧率",
 		.data = GUI_V_S("fpsCounter"),
 		.submenu = 0,
 		.state = false,
@@ -69,7 +69,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show status OSD",
+		.title = "显示 OSD",
 		.data = GUI_V_S("showOSD"),
 		.submenu = 0,
 		.state = true,
@@ -79,7 +79,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autosave state",
+		.title = "即时存档",
 		.data = GUI_V_S("autosave"),
 		.submenu = 0,
 		.state = true,
@@ -89,7 +89,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autoload state",
+		.title = "即时读档",
 		.data = GUI_V_S("autoload"),
 		.submenu = 0,
 		.state = true,
@@ -99,7 +99,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Mute",
+		.title = "静音",
 		.data = GUI_V_S("mute"),
 		.submenu = 0,
 		.state = false,
@@ -109,7 +109,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Fast forward mute",
+		.title = "快进静音",
 		.data = GUI_V_S("fastForwardMute"),
 		.submenu = 0,
 		.state = false,
@@ -119,7 +119,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Use BIOS if found",
+		.title = "可用时使用 BIOS",
 		.data = GUI_V_S("useBios"),
 		.submenu = 0,
 		.state = true,
@@ -130,26 +130,26 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 	};
 #ifdef M_CORE_GBA
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBA BIOS path",
+		.title = "选择 GBA BIOS 路径",
 		.data = GUI_V_S("gba.bios"),
 	};
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GB BIOS path",
+		.title = "选择 GB BIOS 路径",
 		.data = GUI_V_S("gb.bios"),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBC BIOS path",
+		.title = "选择 GBC BIOS 路径",
 		.data = GUI_V_S("gbc.bios"),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select SGB BIOS path",
+		.title = "选择 SGB BIOS 路径",
 		.data = GUI_V_S("sgb.bios"),
 	};
 	struct GUIMenuItem* palette = GUIMenuItemListAppend(&menu.items);
 	*palette = (struct GUIMenuItem) {
-		.title = "GB palette",
+		.title = "GB 调色板",
 		.data = GUI_V_S("gb.pal"),
 	};
 	const struct GBColorPreset* colorPresets;
@@ -161,7 +161,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 	palette->validStates = paletteStates;
 #endif
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Interframe blending",
+		.title = "帧间混合",
 		.data = GUI_V_S("interframeBlending"),
 		.submenu = 0,
 		.state = false,
@@ -172,7 +172,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 	};
 #if defined(M_CORE_GBA) && (defined(GEKKO) || defined(__SWITCH__) || defined(PSP2))
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable GBP features",
+		.title = "GBP 功能",
 		.data = GUI_V_S("gba.forceGbp"),
 		.submenu = 0,
 		.state = false,
@@ -184,7 +184,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB features",
+		.title = "SGB 模式",
 		.data = GUI_V_S("sgb.model"),
 		.submenu = 0,
 		.state = true,
@@ -198,7 +198,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB borders",
+		.title = "SGB 边框",
 		.data = GUI_V_S("sgb.borders"),
 		.submenu = 0,
 		.state = true,
@@ -208,7 +208,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Crop SGB borders",
+		.title = "剪裁 SGB 边框",
 		.data = GUI_V_S("sgb.borderCrop"),
 		.submenu = 0,
 		.state = false,
@@ -228,7 +228,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 			i = 0;
 		}
 		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "Remap controls",
+			.title = "手柄映射",
 			.data = GUI_V_U(CONFIG_REMAP),
 			.state = 0,
 			.validStates = i ? mapNames : 0,
@@ -239,11 +239,11 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		*GUIMenuItemListAppend(&menu.items) = extra[i];
 	}
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Save",
+		.title = "保存",
 		.data = GUI_V_U(CONFIG_SAVE),
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Cancel",
+		.title = "取消",
 		.data = GUI_V_V,
 	};
 	enum GUIMenuExitReason reason;

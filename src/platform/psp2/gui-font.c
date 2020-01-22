@@ -6,44 +6,50 @@
 #include <mgba-util/gui/font.h>
 #include <mgba-util/gui/font-metrics.h>
 #include <mgba-util/string.h>
+#include <mgba/core/version.h>
 
 #include <vita2d.h>
 
 #define CELL_HEIGHT 32
 #define CELL_WIDTH 32
-#define FONT_SIZE 1.25f
+#define FONT_SIZE 25.f
 
 extern const uint8_t _binary_icons2x_png_start[];
 
 struct GUIFont {
-	vita2d_pgf* pgf;
+	vita2d_font* font;
 	vita2d_texture* icons;
 };
 
 struct GUIFont* GUIFontCreate(void) {
 	struct GUIFont* font = malloc(sizeof(struct GUIFont));
-	if (!font) {
-		return 0;
-	}
-	font->pgf = vita2d_load_default_pgf();
+	if (!font) return 0;
+	
+	char path[128];
+	struct stat s;
+	snprintf(path, sizeof(path), "ux0:/data/%s/font.ttf", projectName);
+	if (stat(path, &s) == 0)
+		font->font = vita2d_load_font_file(path);
+	else
+		font->font = vita2d_load_font_file("sa0:/data/font/pvf/cn0.pvf");
 	font->icons = vita2d_load_PNG_buffer(_binary_icons2x_png_start);
 	return font;
 }
 
 void GUIFontDestroy(struct GUIFont* font) {
-	vita2d_free_pgf(font->pgf);
+	vita2d_free_font(font->font);
 	vita2d_free_texture(font->icons);
 	free(font);
 }
 
 unsigned GUIFontHeight(const struct GUIFont* font) {
-	return vita2d_pgf_text_height(font->pgf, FONT_SIZE, "M") + 9;
+	return vita2d_font_text_height(font->font, FONT_SIZE, "M") + 9;
 }
 
 unsigned GUIFontGlyphWidth(const struct GUIFont* font, uint32_t glyph) {
 	char base[5] = { 0 };
 	toUtf8(glyph, base);
-	return vita2d_pgf_text_width(font->pgf, FONT_SIZE, base);
+	return vita2d_font_text_width(font->font, FONT_SIZE, base);
 }
 
 void GUIFontIconMetrics(const struct GUIFont* font, enum GUIIcon icon, unsigned* w, unsigned* h) {
@@ -68,7 +74,7 @@ void GUIFontIconMetrics(const struct GUIFont* font, enum GUIIcon icon, unsigned*
 void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t glyph) {
 	char base[5] = { 0 };
 	toUtf8(glyph, base);
-	vita2d_pgf_draw_text(font->pgf, x, y, color, FONT_SIZE, base);
+	vita2d_font_draw_text(font->font, x, y, color, FONT_SIZE, base);
 }
 
 void GUIFontDrawIcon(struct GUIFont* font, int x, int y, enum GUIAlignment align, enum GUIOrientation orient, uint32_t color, enum GUIIcon icon) {

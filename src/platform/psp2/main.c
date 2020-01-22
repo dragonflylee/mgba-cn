@@ -167,45 +167,45 @@ int main() {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = 0,
 				.validStates = (const char*[]) {
-					"With Background",
-					"Without Background",
-					"Stretched",
-					"Fit Aspect Ratio",
+					"带背景",
+					"无背景",
+					"平铺",
+					"自适应比例",
 				},
 				.nStates = 4
 			},
 			{
-				.title = "Screen filtering",
+				.title = "显示滤镜",
 				.data = GUI_V_S("filtering"),
 				.submenu = 0,
 				.state = 0,
 				.validStates = (const char*[]) {
-					"None",
-					"Bilinear",
+					"无",
+					"双线性",
 				},
 				.nStates = 2
 			},
 			{
-				.title = "Camera",
+				.title = "摄像头",
 				.data = GUI_V_S("camera"),
 				.submenu = 0,
 				.state = 1,
 				.validStates = (const char*[]) {
-					"None",
-					"Front",
-					"Back",
+					"无",
+					"前置",
+					"后置",
 				},
 				.nStates = 3
 			}
 		},
 		.keySources = (struct GUIInputKeys[]) {
 			{
-				.name = "Vita Input",
+				.name = "Vita 键位",
 				.id = PSP2_INPUT,
 				.keyNames = (const char*[]) {
 					"Select",
