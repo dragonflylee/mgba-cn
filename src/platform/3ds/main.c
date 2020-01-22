@@ -914,7 +914,7 @@ int main() {
 		},
 		.keySources = (struct GUIInputKeys[]) {
 			{
-				.name = "3DS Input",
+				.name = "3DS 键位",
 				.id = _3DS_INPUT,
 				.keyNames = (const char*[]) {
 					"A",
@@ -952,39 +952,39 @@ int main() {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = SM_PA_TOP,
 				.validStates = (const char*[]) {
-					"Pixel-Accurate/Bottom",
-					"Aspect-Ratio Fit/Bottom",
-					"Stretched/Bottom",
-					"Pixel-Accurate/Top",
-					"Aspect-Ratio Fit/Top",
-					"Stretched/Top",
+					"像素精确/下屏",
+					"自适应/下屏",
+					"平铺/下屏",
+					"像素精确/上屏",
+					"自适应/上屏",
+					"平铺/上屏",
 				},
 				.nStates = 6
 			},
 			{
-				.title = "Filtering",
+				.title = "滤镜",
 				.data = GUI_V_S("filterMode"),
 				.submenu = 0,
 				.state = FM_LINEAR_2x,
 				.validStates = (const char*[]) {
 					NULL, // Disable choosing nearest neighbor; it always looks bad
-					"Bilinear (smoother)",
-					"Bilinear (pixelated)",
+					"双线性 (平滑)",
+					"双线性 (像素)",
 				},
 				.nStates = 3
 			},
 			{
-				.title = "Screen darkening",
+				.title = "护眼模式",
 				.data = GUI_V_S("darkenMode"),
 				.submenu = 0,
 				.state = DM_NATIVE,
 				.validStates = (const char*[]) {
-					"None",
+					"无",
 					"Dark",
 					"Very dark",
 					"Grayed",
@@ -992,14 +992,14 @@ int main() {
 				.nStates = 4
 			},
 			{
-				.title = "Camera",
+				.title = "摄像头",
 				.data = GUI_V_S("camera"),
 				.submenu = 0,
 				.state = 1,
 				.validStates = (const char*[]) {
-					"None",
-					"Inner",
-					"Outer",
+					"无",
+					"内置",
+					"外置",
 				},
 				.nStates = 3
 			}

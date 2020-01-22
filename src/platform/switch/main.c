@@ -19,6 +19,10 @@
 #include <GLES3/gl3.h>
 #include <GLES3/gl31.h>
 
+#include "nanovg.h"
+#define NANOVG_GLES3_IMPLEMENTATION
+#include "nanovg_gl.h"
+
 #define AUTO_INPUT 0x4E585031
 #define SAMPLES 0x200
 #define N_BUFFERS 4
@@ -115,6 +119,8 @@ static float gyroZ = 0;
 static float tiltX = 0;
 static float tiltY = 0;
 
+NVGcontext* vg;
+
 static struct mStereoSample audioBuffer[N_BUFFERS][BUFFER_SIZE / 4] __attribute__((__aligned__(0x1000)));
 
 static enum ScreenMode {
@@ -167,8 +173,17 @@ static bool eglInit() {
 	}
 
 	eglMakeCurrent(s_display, s_surface, s_surface, s_context);
-	return true;
 
+	vg = nvgCreateGLES3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
+	if (!vg) {
+		goto _fail2;
+	}
+
+	PlFontData fd;
+	if (R_SUCCEEDED(plGetSharedFontByType(&fd, PlSharedFontType_ChineseSimplified))) {
+		nvgCreateFontMem(vg, "sans", (unsigned char*)fd.address, fd.size, 0);
+	}
+	return true;
 _fail2:
 	eglDestroySurface(s_display, s_surface);
 	s_surface = NULL;
@@ -180,6 +195,10 @@ _fail0:
 }
 
 static void eglDeinit() {
+	if (vg) {
+		nvgDeleteGLES3(vg);
+	}
+
 	if (s_display) {
 		eglMakeCurrent(s_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 		if (s_context) {
@@ -682,9 +701,17 @@ static int _batteryState(void) {
 
 static void _guiPrepare(void) {
 	glViewport(0, 1080 - vheight, vwidth, vheight);
+
+	nvgBeginFrame(vg, vwidth, vheight, 1.0f);
+	nvgFontSize(vg, 20.0f);
+	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+	nvgFillColor(vg, nvgRGBA(240, 240, 240, 255));
+	nvgFontFace(vg, "sans");
 }
 
 static void _guiFinish(void) {
+	nvgEndFrame(vg);
+
 	GUIFontDrawSubmit(font);
 }
 
@@ -847,6 +874,7 @@ int main(int argc, char* argv[]) {
 
 	socketInitializeDefault();
 	nxlinkStdio();
+	plInitialize(PlServiceType_User);
 	eglInit();
 	romfsInit();
 	audoutInitialize();
@@ -899,7 +927,7 @@ int main(int argc, char* argv[]) {
 		},
 		.keySources = (struct GUIInputKeys[]) {
 			{
-				.name = "Controller Input",
+				.name = "控制器输入",
 				.id = AUTO_INPUT,
 				.keyNames = (const char*[]) {
 					"A",
@@ -935,19 +963,19 @@ int main(int argc, char* argv[]) {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"Pixel-Accurate",
-					"Aspect-Ratio Fit",
-					"Stretched",
+					"像素精确",
+					"等比例自适应",
+					"平铺",
 				},
 				.nStates = 3
 			},
 			{
-				.title = "Fast forward cap",
+				.title = "跳帧",
 				.data = GUI_V_S("fastForwardCap"),
 				.submenu = 0,
 				.state = 7,
@@ -977,7 +1005,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 16
 			},
 			{
-				.title = "Filtering",
+				.title = "滤镜",
 				.data = GUI_V_S("filterMode"),
 				.submenu = 0,
 				.state = FM_NEAREST,
@@ -988,7 +1016,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 2
 			},
 			{
-				.title = "GPU-accelerated renderer",
+				.title = "GPU硬件解码",
 				.data = GUI_V_S("hwaccelVideo"),
 				.submenu = 0,
 				.state = 0,
@@ -999,7 +1027,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 2
 			},
 			{
-				.title = "Hi-res scaling (requires GPU rendering)",
+				.title = "高分辨率比例 (需开启GPU加速)",
 				.data = GUI_V_S("videoScale"),
 				.submenu = 0,
 				.state = 0,
@@ -1022,7 +1050,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 6
 			},
 			{
-				.title = "Use built-in brightness sensor for Boktai",
+				.title = "使用内置光线感应器",
 				.data = GUI_V_S("useLightSensor"),
 				.submenu = 0,
 				.state = illuminanceAvailable,
@@ -1105,6 +1133,7 @@ int main(int argc, char* argv[]) {
 	audoutExit();
 	romfsExit();
 	eglDeinit();
+	plExit();
 	socketExit();
 	return 0;
 }

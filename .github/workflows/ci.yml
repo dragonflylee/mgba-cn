@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags: ["*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-vita:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Prepare
+      run: |
+        docker build -t mgba/vita - << EOF
+          FROM mgba/vita:20231229
+          USER root
+          RUN vdpm freetype bzip2
+        EOF
+    - name: Build
+      run: |
+        docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_PERF=ON -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=ON -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF -DENABLE_SCRIPTING=OFF -DUSE_LIBZIP=OFF' mgba/vita
+    - name: Upload Assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: mGBA-${{ github.ref_name }}-vita
+        path: build-vita/psp2/mgba.vpk
+
+  build-3ds:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Build
+      run: |
+        docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_PERF=ON -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=OFF -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF -DENABLE_SCRIPTING=OFF' mgba/3ds
+    - name: Upload Assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: mGBA-${{ github.ref_name }}-3ds
+        path: |
+          build-3ds/3ds/mgba.cia
+          build-3ds/3ds/mgba.3dsx
+ 
+  build-switch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Build
+      run: |
+        docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_PERF=OFF -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=OFF -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF -DENABLE_SCRIPTING=OFF' mgba/switch
+    - name: Upload Assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: mGBA-${{ github.ref_name }}-switch
+        path: build-switch/switch/mgba.nro
+
+  upload-release:
+    needs: [ build-vita, build-3ds, build-switch ]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+    - name: Download Assets
+      uses: actions/download-artifact@v3
+    - name: Package Assets
+      run: |
+        for p in *; do
+          [[ -d $p ]] && 7z a -mx=9 $p.7z $p
+        done
+    - name: Release and Upload Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        name: mGBA ${{ github.ref_name }} 中文版
+        files: mGBA-*.7z    
+        body: |
+          ![download](https://img.shields.io/github/downloads/${{ github.repository }}/${{ github.ref_name }}/total?label=Downloads)        

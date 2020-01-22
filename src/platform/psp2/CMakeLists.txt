@@ -13,7 +13,7 @@ source_group("PS Vita-specific code" FILES ${OS_SRC})
 list(APPEND CORE_VFS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/sce-vfs.c)
 set(CORE_VFS_SRC ${CORE_VFS_SRC} PARENT_SCOPE)
 
-set(OS_LIB -lvita2d -l${M_LIBRARY}
+set(OS_LIB -lvita2d -lfreetype -lbz2 -l${M_LIBRARY}
     -lSceAppMgr_stub
     -lSceAppUtil_stub
     -lSceAudio_stub
@@ -57,7 +57,7 @@ vita_create_self(${BINARY_NAME}.self ${BINARY_NAME}.elf)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/template.xml.in ${CMAKE_CURRENT_BINARY_DIR}/template.xml)
 
-vita_create_vpk(${BINARY_NAME}.vpk MGBA00001 ${BINARY_NAME}.self
+vita_create_vpk(${BINARY_NAME}.vpk MGBA00002 ${BINARY_NAME}.self
                 NAME ${PROJECT_NAME}
                 FILE ${CMAKE_CURRENT_SOURCE_DIR}/icon0.png sce_sys/icon0.png
                 FILE ${CMAKE_CURRENT_SOURCE_DIR}/pic0.png sce_sys/pic0.png
