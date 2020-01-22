@@ -36,13 +36,13 @@ static bool _biosNamed(const char* name) {
 
 void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t nExtra) {
 	struct GUIMenu menu = {
-		.title = "Configure",
+		.title = "配置",
 		.index = 0,
 		.background = &runner->background.d
 	};
 	GUIMenuItemListInit(&menu.items, 0);
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Frameskip",
+		.title = "跳帧",
 		.data = "frameskip",
 		.submenu = 0,
 		.state = 0,
@@ -52,115 +52,115 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 10
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show framerate",
+		.title = "显示帧率",
 		.data = "fpsCounter",
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Show status OSD",
+		.title = "显示 OSD 信息",
 		.data = "showOSD",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autosave state",
+		.title = "自动存档",
 		.data = "autosave",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Autoload state",
+		.title = "自动读档",
 		.data = "autoload",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Mute",
+		.title = "静音",
 		.data = "mute",
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Use BIOS if found",
+		.title = "当可用是使用 BIOS 文件",
 		.data = "useBios",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 #ifdef M_CORE_GBA
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBA BIOS path",
+		.title = "选择 GBA BIOS 路径",
 		.data = "gba.bios",
 	};
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GB BIOS path",
+		.title = "选择 GB BIOS 路径",
 		.data = "gb.bios",
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select GBC BIOS path",
+		.title = "选择 GBC BIOS 路径",
 		.data = "gbc.bios",
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Select SGB BIOS path",
+		.title = "选择 SGB BIOS 路径",
 		.data = "sgb.bios",
 	};
 #endif
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Interframe blending",
+		.title = "视频帧插入混合",
 		.data = "interframeBlending",
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 #if defined(M_CORE_GBA) && (defined(GEKKO) || defined(__SWITCH__) || defined(PSP2))
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable GBP features",
+		.title = "启用 GBP 功能",
 		.data = "gba.forceGbp",
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
 #endif
 #ifdef M_CORE_GB
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB features",
+		.title = "SGB 模式",
 		.data = "sgb.model",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.stateMappings = (const struct GUIVariant[]) {
 			GUI_V_S("DMG"),
@@ -169,12 +169,12 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.nStates = 2
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Enable SGB borders",
+		.title = "SGB borders",
 		.data = "sgb.borders",
 		.submenu = 0,
 		.state = true,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
@@ -184,7 +184,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		.submenu = 0,
 		.state = false,
 		.validStates = (const char*[]) {
-			"Off", "On"
+			"禁用", "启用"
 		},
 		.nStates = 2
 	};
@@ -200,7 +200,7 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 			i = 0;
 		}
 		*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-			.title = "Remap controls",
+			.title = "手柄映射",
 			.data = "*REMAP",
 			.state = 0,
 			.validStates = i ? mapNames : 0,
@@ -211,11 +211,11 @@ void mGUIShowConfig(struct mGUIRunner* runner, struct GUIMenuItem* extra, size_t
 		*GUIMenuItemListAppend(&menu.items) = extra[i];
 	}
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Save",
+		.title = "保存",
 		.data = "*SAVE",
 	};
 	*GUIMenuItemListAppend(&menu.items) = (struct GUIMenuItem) {
-		.title = "Cancel",
+		.title = "取消",
 		.data = 0,
 	};
 	enum GUIMenuExitReason reason;

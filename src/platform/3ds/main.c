@@ -935,22 +935,22 @@ int main() {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = "screenMode",
 				.submenu = 0,
 				.state = SM_PA_TOP,
 				.validStates = (const char*[]) {
 					"Pixel-Accurate/Bottom",
-					"Aspect-Ratio Fit/Bottom",
-					"Stretched/Bottom",
+					"自适应/下屏",
+					"平铺/下屏",
 					"Pixel-Accurate/Top",
-					"Aspect-Ratio Fit/Top",
-					"Stretched/Top",
+					"自适应/上屏",
+					"平铺/上屏",
 				},
 				.nStates = 6
 			},
 			{
-				.title = "Filtering",
+				.title = "滤镜",
 				.data = "filterMode",
 				.submenu = 0,
 				.state = FM_LINEAR_2x,
@@ -962,12 +962,12 @@ int main() {
 				.nStates = 3
 			},
 			{
-				.title = "Screen darkening",
+				.title = "护眼模式",
 				.data = "darkenMode",
 				.submenu = 0,
 				.state = DM_NATIVE,
 				.validStates = (const char*[]) {
-					"None",
+					"无",
 					"Dark",
 					"Very dark",
 					"Grayed",
@@ -975,14 +975,14 @@ int main() {
 				.nStates = 4
 			},
 			{
-				.title = "Camera",
+				.title = "摄像头",
 				.data = "camera",
 				.submenu = 0,
 				.state = 1,
 				.validStates = (const char*[]) {
-					"None",
-					"Inner",
-					"Outer",
+					"无",
+					"内置",
+					"外置",
 				},
 				.nStates = 3
 			}
