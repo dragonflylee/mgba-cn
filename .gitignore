@@ -17,3 +17,5 @@ CMakeCache.txt
 CMakeFiles
 CMakeSettings.json
 version.c
+.vscode/.BROWSE.VC.*
+.vscode/ipch
