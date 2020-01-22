@@ -12,7 +12,7 @@
 	<frame id="frame3">
 		<liveitem>
 			<text origin="background" align="right" y="-250" margin-right="5">
-				<str size="18" shadow="on" color="#ffffff">${VERSION_STRING}</str>
+				<str size="18" shadow="on" color="#ffffff">${VERSION_STRING} 汉化版</str>
 			</text>
 		</liveitem>
 	</frame>

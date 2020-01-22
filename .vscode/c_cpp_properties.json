@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "name": "PSVita",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${VITASDK}/arm-vita-eabi/include",
+                "${VITASDK}/include"
+            ],
+            "defines": [
+                "VITA_VERSION=0.01"
+            ],
+            "compilerPath": "${VITASDK}/bin/arm-vita-eabi-g++",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "gcc-arm"
+        },
+        {
+            "name": "Switch",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${DEVKITPRO}/libnx/include",
+                "${DEVKITPRO}/devkitA64/aarch64-none-elf/include/**",
+                "${DEVKITPRO}/portlibs/switch/include/**"
+            ],
+            "defines": [
+                "__SWITCH__",
+                "M_CORE_GBA",
+                "M_CORE_GB",
+                "EGL_NO_X11",
+                "USE_PNG"
+            ],
+            "compilerPath": "${DEVKITPRO}/devkitA64/bin/aarch64-none-elf-g++",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "gcc-arm64"
+        }
+    ],
+    "version": 4
+}
