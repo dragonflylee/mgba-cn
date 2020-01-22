@@ -887,7 +887,7 @@ int main(int argc, char* argv[]) {
 		},
 		.keySources = (struct GUIInputKeys[]) {
 			{
-				.name = "Controller Input",
+				.name = "控制器输入",
 				.id = AUTO_INPUT,
 				.keyNames = (const char*[]) {
 					"A",
@@ -923,19 +923,19 @@ int main(int argc, char* argv[]) {
 		},
 		.configExtra = (struct GUIMenuItem[]) {
 			{
-				.title = "Screen mode",
+				.title = "显示模式",
 				.data = GUI_V_S("screenMode"),
 				.submenu = 0,
 				.state = SM_PA,
 				.validStates = (const char*[]) {
-					"Pixel-Accurate",
-					"Aspect-Ratio Fit",
-					"Stretched",
+					"像素精确",
+					"等比例自适应",
+					"平铺",
 				},
 				.nStates = 3
 			},
 			{
-				.title = "Fast forward cap",
+				.title = "跳帧",
 				.data = GUI_V_S("fastForwardCap"),
 				.submenu = 0,
 				.state = 7,
@@ -965,7 +965,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 16
 			},
 			{
-				.title = "GPU-accelerated renderer",
+				.title = "GPU硬件加速",
 				.data = GUI_V_S("hwaccelVideo"),
 				.submenu = 0,
 				.state = 0,
@@ -976,7 +976,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 2
 			},
 			{
-				.title = "Hi-res scaling (requires GPU rendering)",
+				.title = "高分辨率比例 (需开启GPU加速)",
 				.data = GUI_V_S("videoScale"),
 				.submenu = 0,
 				.state = 0,
@@ -999,7 +999,7 @@ int main(int argc, char* argv[]) {
 				.nStates = 6
 			},
 			{
-				.title = "Use built-in brightness sensor for Boktai",
+				.title = "使用内置光线感应器",
 				.data = GUI_V_S("useLightSensor"),
 				.submenu = 0,
 				.state = illuminanceAvailable,

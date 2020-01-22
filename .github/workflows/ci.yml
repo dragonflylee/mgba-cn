@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags: ["*"]
+
+jobs:
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build-Vita
+        run: |
+          set -Eeuo pipefail -x
+          docker build -t mgba/vita:new - << EOF
+            FROM mgba/vita
+            USER root
+            RUN vdpm freetype
+          EOF
+          docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=ON -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF -DUSE_LIBZIP=OFF' mgba/vita:new
+      - name: Build-3DS
+        run: |
+          docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=OFF -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF' mgba/3ds
+      - name: Build-Switch
+        run: |
+          docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) -e 'CMAKE_FLAGS=-DDISTBUILD=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SDL=OFF -DBUILD_QT=OFF -DUSE_FFMPEG=OFF -DBUILD_LTO=OFF -DBUILD_STATIC=ON -DBUILD_SHARED=OFF -DBUILD_PYTHON=OFF -DBUILD_SUITE=OFF -DBUILD_CINEMA=OFF' mgba/switch
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            build-vita/psp2/mgba.vpk
+            build-3ds/3ds/mgba.cia
+            build-3ds/3ds/mgba.3dsx
