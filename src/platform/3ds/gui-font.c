@@ -21,6 +21,20 @@ struct GUIFont {
 	float size;
 };
 
+static Result FontLoad(CFNT_s** font, const char* filename) {
+	FILE* f = fopen(filename, "rb");
+	if (!f) return 1;
+	CFNT_s ret;
+	fread(&ret, 1, sizeof(CFNT_s), f);
+	*font = linearAlloc(ret.fileSize);
+	if (*font) {
+		memcpy(*font, &ret, sizeof(CFNT_s));
+		fread((u8*)(*font) + sizeof(CFNT_s), 1, ret.fileSize - sizeof(CFNT_s), f);
+	}
+  fclose(f);
+	return 0;
+}
+
 struct GUIFont* GUIFontCreate(void) {
 	fontEnsureMapped();
 	struct GUIFont* guiFont = malloc(sizeof(struct GUIFont));
@@ -28,9 +42,30 @@ struct GUIFont* GUIFontCreate(void) {
 		return 0;
 	}
 	C3D_Tex* tex;
+	TGLP_s* glyphInfo;
 
-	guiFont->font = fontGetSystemFont();
-	TGLP_s* glyphInfo = fontGetGlyphInfo(guiFont->font);
+	const char* list[4] = {
+		"sdmc:/font/hkj_full.bcfnt",
+		"sdmc:/font/hkj_std.bcfnt",
+		"sdmc:/font/cbf_full.bcfnt",
+		"sdmc:/font/cbf_std.bcfnt",
+	};
+	guiFont->font = NULL;
+
+	for (unsigned int i = 0; i < 4; ++i) {
+		if (R_SUCCEEDED(FontLoad(&guiFont->font, list[i]))) {
+			break;
+		}
+	}
+
+	if (guiFont->font) {
+		fontFixPointers(guiFont->font);
+		glyphInfo = guiFont->font->finf.tglp;
+	} else {
+		guiFont->font = fontGetSystemFont();
+		glyphInfo = fontGetGlyphInfo(guiFont->font);
+	}
+
 	guiFont->size = FONT_SIZE / glyphInfo->cellHeight;
 	guiFont->sheets = calloc(glyphInfo->nSheets, sizeof(*guiFont->sheets));
 
