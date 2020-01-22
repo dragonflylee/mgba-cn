@@ -10,11 +10,29 @@
 #include <mgba-util/vfs.h>
 
 #include <GLES3/gl3.h>
+#include <switch.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define GLYPH_HEIGHT 24
 #define CELL_HEIGHT 32
 #define CELL_WIDTH 32
 #define MAX_GLYPHS 1024
+
+#define CJK_ATLAS_SIZE 512
+#define CJK_FONT_SIZE 24
+#define CJK_GLYPH_PADDING 2
+#define CJK_MAX_CACHE 512
+
+struct CjkGlyphEntry {
+	uint32_t codepoint;
+	int atlasX, atlasY;
+	int width, height;
+	int advanceX;
+	int bearingX, bearingY;
+	struct CjkGlyphEntry* next;
+};
 
 static const GLfloat _offsets[] = {
 	0.f, 0.f,
@@ -87,6 +105,21 @@ struct GUIFont {
 	GLfloat dimsData[MAX_GLYPHS][2];
 	GLfloat transformData[2][MAX_GLYPHS][2];
 	GLfloat colorData[MAX_GLYPHS][4];
+
+	/* CJK font rendering */
+	FT_Library ftLibrary;
+	FT_Face cjkFace;
+	GLuint cjkTexture;
+	struct CjkGlyphEntry* cjkCache[CJK_MAX_CACHE];
+	int cjkAtlasX, cjkAtlasY, cjkRowHeight;
+	int cjkGlyphCount;
+	int cjkCurrentGlyph;
+
+	GLfloat cjkOriginData[MAX_GLYPHS][3];
+	GLfloat cjkGlyphData[MAX_GLYPHS][2];
+	GLfloat cjkDimsData[MAX_GLYPHS][2];
+	GLfloat cjkTransformData[2][MAX_GLYPHS][2];
+	GLfloat cjkColorData[MAX_GLYPHS][4];
 };
 
 static bool _loadTexture(const char* path) {
@@ -254,6 +287,43 @@ struct GUIFont* GUIFontCreate(void) {
 
 	glBindVertexArray(0);
 
+	/* Initialize CJK font rendering */
+	font->ftLibrary = NULL;
+	font->cjkFace = NULL;
+	font->cjkTexture = 0;
+	font->cjkAtlasX = CJK_GLYPH_PADDING;
+	font->cjkAtlasY = CJK_GLYPH_PADDING;
+	font->cjkRowHeight = 0;
+	font->cjkGlyphCount = 0;
+	font->cjkCurrentGlyph = 0;
+	memset(font->cjkCache, 0, sizeof(font->cjkCache));
+
+	if (!FT_Init_FreeType(&font->ftLibrary)) {
+		PlFontData fd;
+		if (R_SUCCEEDED(plGetSharedFontByType(&fd, PlSharedFontType_ChineseSimplified))) {
+			if (!FT_New_Memory_Face(font->ftLibrary, (const FT_Byte*) fd.address, fd.size, 0, &font->cjkFace)) {
+				FT_Set_Pixel_Sizes(font->cjkFace, 0, CJK_FONT_SIZE);
+
+				glGenTextures(1, &font->cjkTexture);
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, font->cjkTexture);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+				/* Initialize atlas with transparent pixels */
+				size_t atlasSize = CJK_ATLAS_SIZE * CJK_ATLAS_SIZE;
+				uint8_t* clearData = calloc(1, atlasSize);
+				if (clearData) {
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, CJK_ATLAS_SIZE, CJK_ATLAS_SIZE, 0, GL_ALPHA, GL_UNSIGNED_BYTE, clearData);
+					free(clearData);
+				}
+				glActiveTexture(GL_TEXTURE0);
+			}
+		}
+	}
+
 	return font;
 }
 
@@ -267,6 +337,28 @@ void GUIFontDestroy(struct GUIFont* font) {
 	glDeleteProgram(font->program);
 	glDeleteTextures(1, &font->font);
 	glDeleteVertexArrays(1, &font->vao);
+
+	/* Clean up CJK resources */
+	if (font->cjkTexture) {
+		glDeleteTextures(1, &font->cjkTexture);
+	}
+	if (font->cjkFace) {
+		FT_Done_Face(font->cjkFace);
+	}
+	if (font->ftLibrary) {
+		FT_Done_FreeType(font->ftLibrary);
+	}
+
+	/* Free CJK glyph cache entries */
+	for (int i = 0; i < CJK_MAX_CACHE; i++) {
+		struct CjkGlyphEntry* entry = font->cjkCache[i];
+		while (entry) {
+			struct CjkGlyphEntry* next = entry->next;
+			free(entry);
+			entry = next;
+		}
+	}
+
 	free(font);
 }
 
@@ -276,9 +368,21 @@ unsigned GUIFontHeight(const struct GUIFont* font) {
 }
 
 unsigned GUIFontGlyphWidth(const struct GUIFont* font, uint32_t glyph) {
-	UNUSED(font);
 	if (glyph > 0x7F) {
-		glyph = '?';
+		if (!font->cjkFace) {
+			return defaultFontMetrics['?'].width * 2;
+		}
+		/* Look up in cache */
+		int slot = glyph % CJK_MAX_CACHE;
+		struct CjkGlyphEntry* entry = font->cjkCache[slot];
+		while (entry) {
+			if (entry->codepoint == glyph) {
+				return entry->advanceX;
+			}
+			entry = entry->next;
+		}
+		/* Not in cache, use estimated width based on CJK character */
+		return CJK_FONT_SIZE;
 	}
 	return defaultFontMetrics[glyph].width * 2;
 }
@@ -302,35 +406,199 @@ void GUIFontIconMetrics(const struct GUIFont* font, enum GUIIcon icon, unsigned*
 	}
 }
 
+static struct CjkGlyphEntry* _cjkCacheLookup(struct GUIFont* font, uint32_t codepoint) {
+	int slot = codepoint % CJK_MAX_CACHE;
+	struct CjkGlyphEntry* entry = font->cjkCache[slot];
+	while (entry) {
+		if (entry->codepoint == codepoint) {
+			return entry;
+		}
+		entry = entry->next;
+	}
+	return NULL;
+}
+
+static struct CjkGlyphEntry* _cjkCacheInsert(struct GUIFont* font, uint32_t codepoint) {
+	if (!font->cjkFace) {
+		return NULL;
+	}
+
+	/* Load and render glyph via FreeType */
+	FT_UInt glyphIndex = FT_Get_Char_Index(font->cjkFace, codepoint);
+	if (!glyphIndex && codepoint != 0) {
+		return NULL;
+	}
+
+	if (FT_Load_Glyph(font->cjkFace, glyphIndex, FT_LOAD_DEFAULT)) {
+		return NULL;
+	}
+
+	FT_GlyphSlot slot = font->cjkFace->glyph;
+	if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL)) {
+		return NULL;
+	}
+
+	FT_Bitmap* bitmap = &slot->bitmap;
+	int gw = bitmap->width;
+	int gh = bitmap->rows;
+
+	if (gw <= 0 || gh <= 0) {
+		/* Space or blank glyph, create a minimal entry */
+		struct CjkGlyphEntry* entry = calloc(1, sizeof(struct CjkGlyphEntry));
+		if (!entry) return NULL;
+		entry->codepoint = codepoint;
+		entry->width = 0;
+		entry->height = 0;
+		entry->advanceX = slot->advance.x >> 6;
+		entry->bearingX = slot->bitmap_left;
+		entry->bearingY = slot->bitmap_top;
+
+		int slotIdx = codepoint % CJK_MAX_CACHE;
+		entry->next = font->cjkCache[slotIdx];
+		font->cjkCache[slotIdx] = entry;
+		font->cjkGlyphCount++;
+		return entry;
+	}
+
+	/* Check if glyph fits in current row, advance to next row if not */
+	if (font->cjkAtlasX + gw + CJK_GLYPH_PADDING > CJK_ATLAS_SIZE) {
+		font->cjkAtlasX = CJK_GLYPH_PADDING;
+		font->cjkAtlasY += font->cjkRowHeight + CJK_GLYPH_PADDING;
+		font->cjkRowHeight = 0;
+	}
+
+	/* Check if atlas is full */
+	if (font->cjkAtlasY + gh + CJK_GLYPH_PADDING > CJK_ATLAS_SIZE) {
+		return NULL;
+	}
+
+	/* Create cache entry */
+	struct CjkGlyphEntry* entry = calloc(1, sizeof(struct CjkGlyphEntry));
+	if (!entry) return NULL;
+
+	entry->codepoint = codepoint;
+	entry->atlasX = font->cjkAtlasX;
+	entry->atlasY = font->cjkAtlasY;
+	entry->width = gw;
+	entry->height = gh;
+	entry->advanceX = slot->advance.x >> 6;
+	entry->bearingX = slot->bitmap_left;
+	entry->bearingY = slot->bitmap_top;
+
+	/* Upload glyph bitmap to atlas texture */
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, font->cjkTexture);
+
+	if (bitmap->pixel_mode == FT_PIXEL_MODE_GRAY) {
+		/* Copy bitmap into padded buffer for glTexSubImage2D */
+		int rowSize = gw;
+		uint8_t* buf = malloc(rowSize * gh);
+		if (buf) {
+			for (int row = 0; row < gh; row++) {
+				memcpy(buf + row * rowSize, bitmap->buffer + row * bitmap->pitch, gw);
+			}
+			GLint oldUnpackAlignment;
+			glGetIntegerv(GL_UNPACK_ALIGNMENT, &oldUnpackAlignment);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexSubImage2D(GL_TEXTURE_2D, 0, font->cjkAtlasX, font->cjkAtlasY, gw, gh, GL_ALPHA, GL_UNSIGNED_BYTE, buf);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, oldUnpackAlignment);
+			free(buf);
+		}
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+
+	/* Update atlas cursor */
+	font->cjkAtlasX += gw + CJK_GLYPH_PADDING;
+	if (gh > font->cjkRowHeight) {
+		font->cjkRowHeight = gh;
+	}
+
+	/* Insert into cache hash table */
+	int slotIdx = codepoint % CJK_MAX_CACHE;
+	entry->next = font->cjkCache[slotIdx];
+	font->cjkCache[slotIdx] = entry;
+	font->cjkGlyphCount++;
+
+	return entry;
+}
+
 void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t glyph) {
 	if (glyph > 0x7F) {
-		glyph = '?';
+		/* CJK character rendering */
+		if (!font->cjkFace) {
+			glyph = '?';
+			goto ascii;
+		}
+
+		struct CjkGlyphEntry* entry = _cjkCacheLookup(font, glyph);
+		if (!entry) {
+			entry = _cjkCacheInsert(font, glyph);
+		}
+		if (!entry || entry->width <= 0) {
+			/* Fall back to '?' for missing glyphs if no bitmap */
+			if (!entry) {
+				glyph = '?';
+				goto ascii;
+			}
+			/* Space character, just advance position (handled by caller via width) */
+			return;
+		}
+
+		if (font->cjkCurrentGlyph >= MAX_GLYPHS) {
+			GUIFontDrawSubmit(font);
+		}
+
+		int cjkOffset = font->cjkCurrentGlyph;
+
+		font->cjkOriginData[cjkOffset][0] = x + entry->bearingX;
+		font->cjkOriginData[cjkOffset][1] = y - entry->bearingY;
+		font->cjkOriginData[cjkOffset][2] = 0;
+		font->cjkGlyphData[cjkOffset][0] = entry->atlasX;
+		font->cjkGlyphData[cjkOffset][1] = entry->atlasY;
+		font->cjkDimsData[cjkOffset][0] = entry->width;
+		font->cjkDimsData[cjkOffset][1] = entry->height;
+		font->cjkTransformData[0][cjkOffset][0] = 1.0f;
+		font->cjkTransformData[0][cjkOffset][1] = 0.0f;
+		font->cjkTransformData[1][cjkOffset][0] = 0.0f;
+		font->cjkTransformData[1][cjkOffset][1] = 1.0f;
+		font->cjkColorData[cjkOffset][0] = (color & 0xFF) / 255.0f;
+		font->cjkColorData[cjkOffset][1] = ((color >> 8) & 0xFF) / 255.0f;
+		font->cjkColorData[cjkOffset][2] = ((color >> 16) & 0xFF) / 255.0f;
+		font->cjkColorData[cjkOffset][3] = ((color >> 24) & 0xFF) / 255.0f;
+
+		++font->cjkCurrentGlyph;
+		return;
 	}
-	struct GUIFontGlyphMetric metric = defaultFontMetrics[glyph];
 
-	if (font->currentGlyph >= MAX_GLYPHS) {
-		GUIFontDrawSubmit(font);
+ascii:
+	{
+		struct GUIFontGlyphMetric metric = defaultFontMetrics[glyph];
+
+		if (font->currentGlyph >= MAX_GLYPHS) {
+			GUIFontDrawSubmit(font);
+		}
+
+		int offset = font->currentGlyph;
+
+		font->originData[offset][0] = x;
+		font->originData[offset][1] = y - GLYPH_HEIGHT + metric.padding.top * 2;
+		font->originData[offset][2] = 0;
+		font->glyphData[offset][0] = (glyph & 15) * CELL_WIDTH + metric.padding.left * 2;
+		font->glyphData[offset][1] = (glyph >> 4) * CELL_HEIGHT + metric.padding.top * 2;
+		font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right) * 2;
+		font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom) * 2;
+		font->transformData[0][offset][0] = 1.0f;
+		font->transformData[0][offset][1] = 0.0f;
+		font->transformData[1][offset][0] = 0.0f;
+		font->transformData[1][offset][1] = 1.0f;
+		font->colorData[offset][0] = (color & 0xFF) / 255.0f;
+		font->colorData[offset][1] = ((color >> 8) & 0xFF) / 255.0f;
+		font->colorData[offset][2] = ((color >> 16) & 0xFF) / 255.0f;
+		font->colorData[offset][3] = ((color >> 24) & 0xFF) / 255.0f;
+
+		++font->currentGlyph;
 	}
-
-	int offset = font->currentGlyph;
-
-	font->originData[offset][0] = x;
-	font->originData[offset][1] = y - GLYPH_HEIGHT + metric.padding.top * 2;
-	font->originData[offset][2] = 0;
-	font->glyphData[offset][0] = (glyph & 15) * CELL_WIDTH + metric.padding.left * 2;
-	font->glyphData[offset][1] = (glyph >> 4) * CELL_HEIGHT + metric.padding.top * 2;
-	font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right) * 2;
-	font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom) * 2;
-	font->transformData[0][offset][0] = 1.0f;
-	font->transformData[0][offset][1] = 0.0f;
-	font->transformData[1][offset][0] = 0.0f;
-	font->transformData[1][offset][1] = 1.0f;
-	font->colorData[offset][0] = (color & 0xFF) / 255.0f;
-	font->colorData[offset][1] = ((color >> 8) & 0xFF) / 255.0f;
-	font->colorData[offset][2] = ((color >> 16) & 0xFF) / 255.0f;
-	font->colorData[offset][3] = ((color >> 24) & 0xFF) / 255.0f;
-
-	++font->currentGlyph;
 }
 
 void GUIFontDrawIcon(struct GUIFont* font, int x, int y, enum GUIAlignment align, enum GUIOrientation orient, uint32_t color, enum GUIIcon icon) {
@@ -436,47 +704,88 @@ void GUIFontDrawIconSize(struct GUIFont* font, int x, int y, int w, int h, uint3
 void GUIFontDrawSubmit(struct GUIFont* font) {
 	glUseProgram(font->program);
 	glBindVertexArray(font->vao);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, font->font);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glUniform1i(font->texLocation, 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->originVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 3 * font->currentGlyph, font->originData);
+	/* Render ASCII glyphs */
+	if (font->currentGlyph > 0) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, font->font);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->glyphVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->glyphData);
+		glBindBuffer(GL_ARRAY_BUFFER, font->originVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 3 * font->currentGlyph, font->originData);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->dimsVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->dimsData);
+		glBindBuffer(GL_ARRAY_BUFFER, font->glyphVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->glyphData);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->transformData[0]);
+		glBindBuffer(GL_ARRAY_BUFFER, font->dimsVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->dimsData);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->transformData[1]);
+		glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->transformData[0]);
 
-	glBindBuffer(GL_ARRAY_BUFFER, font->colorVbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4 * font->currentGlyph, font->colorData);
+		glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->currentGlyph, font->transformData[1]);
 
-	glUniform1f(font->cutoffLocation, 0.1f);
-	glUniform3f(font->colorModulusLocation, 0.f, 0.f, 0.f);
-	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
+		glBindBuffer(GL_ARRAY_BUFFER, font->colorVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4 * font->currentGlyph, font->colorData);
 
-	glUniform1f(font->cutoffLocation, 0.7f);
-	glUniform3f(font->colorModulusLocation, 1.f, 1.f, 1.f);
-	glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
+		glUniform1f(font->cutoffLocation, 0.1f);
+		glUniform3f(font->colorModulusLocation, 0.f, 0.f, 0.f);
+		glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
 
-	font->currentGlyph = 0;
+		glUniform1f(font->cutoffLocation, 0.7f);
+		glUniform3f(font->colorModulusLocation, 1.f, 1.f, 1.f);
+		glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->currentGlyph);
+
+		font->currentGlyph = 0;
+	}
+
+	/* Render CJK glyphs */
+	if (font->cjkCurrentGlyph > 0) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, font->cjkTexture);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->originVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 3 * font->cjkCurrentGlyph, font->cjkOriginData);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->glyphVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->cjkCurrentGlyph, font->cjkGlyphData);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->dimsVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->cjkCurrentGlyph, font->cjkDimsData);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->cjkCurrentGlyph, font->cjkTransformData[0]);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->transformVbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 2 * font->cjkCurrentGlyph, font->cjkTransformData[1]);
+
+		glBindBuffer(GL_ARRAY_BUFFER, font->colorVbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * MAX_GLYPHS, NULL, GL_STREAM_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * 4 * font->cjkCurrentGlyph, font->cjkColorData);
+
+		/* CJK glyphs are regular grayscale, use a single cutoff */
+		glUniform1f(font->cutoffLocation, 0.05f);
+		glUniform3f(font->colorModulusLocation, 1.f, 1.f, 1.f);
+		glDrawArraysInstanced(GL_TRIANGLE_FAN, 0, 4, font->cjkCurrentGlyph);
+
+		font->cjkCurrentGlyph = 0;
+	}
 
 	glBindVertexArray(0);
 	glUseProgram(0);

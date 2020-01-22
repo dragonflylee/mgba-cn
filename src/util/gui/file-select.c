@@ -55,7 +55,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 	if (!dir) {
 		return false;
 	}
-	*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = "(Up)" };
+	*GUIMenuItemListAppend(currentFiles) = (struct GUIMenuItem) { .title = "(上一级文件夹)" };
 	size_t i = 0;
 	size_t items = 0;
 	struct VDirEntry* de;
@@ -73,7 +73,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 			if (params->guiPrepare) {
 				params->guiPrepare();
 			}
-			GUIFontPrintf(params->font, 0, GUIFontHeight(params->font), GUI_ALIGN_LEFT, 0xFFFFFFFF, "(scanning for items: %"PRIz"u)", i);
+			GUIFontPrintf(params->font, 0, GUIFontHeight(params->font), GUI_ALIGN_LEFT, 0xFFFFFFFF, "(正在扫描: %"PRIz"u)", i);
 			GUIFontPrintf(params->font, 0, GUIFontHeight(params->font) * 2, GUI_ALIGN_LEFT, 0xFFFFFFFF, "%s", currentPath);
 			if (params->guiFinish) {
 				params->guiFinish();
@@ -116,7 +116,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 				if (params->guiPrepare) {
 					params->guiPrepare();
 				}
-				GUIFontPrintf(params->font, 0, GUIFontHeight(params->font), GUI_ALIGN_LEFT, 0xFFFFFFFF, "(scanning item %"PRIz"u of %"PRIz"u)", i, items);
+				GUIFontPrintf(params->font, 0, GUIFontHeight(params->font), GUI_ALIGN_LEFT, 0xFFFFFFFF, "(扫描 %"PRIz"u of %"PRIz"u)", i, items);
 				GUIFontPrintf(params->font, 0, GUIFontHeight(params->font) * 2, GUI_ALIGN_LEFT, 0xFFFFFFFF, "%s", currentPath);
 				if (params->guiFinish) {
 					params->guiFinish();
@@ -159,7 +159,7 @@ static bool _refreshDirectory(struct GUIParams* params, const char* currentPath,
 
 bool GUISelectFile(struct GUIParams* params, char* outPath, size_t outLen, bool (*filterName)(const char* name), bool (*filterContents)(struct VFile*), const char* preselect) {
 	struct GUIMenu menu = {
-		.title = "Select file",
+		.title = "选择文件",
 		.subtitle = params->currentPath,
 	};
 	GUIMenuItemListInit(&menu.items, 0);
