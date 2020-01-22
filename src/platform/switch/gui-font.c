@@ -11,10 +11,12 @@
 
 #include <GLES3/gl3.h>
 
+#include "nanovg.h"
+
 #define GLYPH_HEIGHT 24
-#define CELL_HEIGHT 32
-#define CELL_WIDTH 32
 #define MAX_GLYPHS 1024
+
+extern NVGcontext* vg;
 
 static const GLfloat _offsets[] = {
 	0.f, 0.f,
@@ -303,34 +305,9 @@ void GUIFontIconMetrics(const struct GUIFont* font, enum GUIIcon icon, unsigned*
 }
 
 void GUIFontDrawGlyph(struct GUIFont* font, int x, int y, uint32_t color, uint32_t glyph) {
-	if (glyph > 0x7F) {
-		glyph = '?';
-	}
-	struct GUIFontGlyphMetric metric = defaultFontMetrics[glyph];
-
-	if (font->currentGlyph >= MAX_GLYPHS) {
-		GUIFontDrawSubmit(font);
-	}
-
-	int offset = font->currentGlyph;
-
-	font->originData[offset][0] = x;
-	font->originData[offset][1] = y - GLYPH_HEIGHT + metric.padding.top * 2;
-	font->originData[offset][2] = 0;
-	font->glyphData[offset][0] = (glyph & 15) * CELL_WIDTH + metric.padding.left * 2;
-	font->glyphData[offset][1] = (glyph >> 4) * CELL_HEIGHT + metric.padding.top * 2;
-	font->dimsData[offset][0] = CELL_WIDTH - (metric.padding.left + metric.padding.right) * 2;
-	font->dimsData[offset][1] = CELL_HEIGHT - (metric.padding.top + metric.padding.bottom) * 2;
-	font->transformData[0][offset][0] = 1.0f;
-	font->transformData[0][offset][1] = 0.0f;
-	font->transformData[1][offset][0] = 0.0f;
-	font->transformData[1][offset][1] = 1.0f;
-	font->colorData[offset][0] = (color & 0xFF) / 255.0f;
-	font->colorData[offset][1] = ((color >> 8) & 0xFF) / 255.0f;
-	font->colorData[offset][2] = ((color >> 16) & 0xFF) / 255.0f;
-	font->colorData[offset][3] = ((color >> 24) & 0xFF) / 255.0f;
-
-	++font->currentGlyph;
+	char base[5] = { 0 };
+	toUtf8(glyph, base);
+	nvgText(vg, x, y, base, NULL);
 }
 
 void GUIFontDrawIcon(struct GUIFont* font, int x, int y, enum GUIAlignment align, enum GUIOrientation orient, uint32_t color, enum GUIIcon icon) {
