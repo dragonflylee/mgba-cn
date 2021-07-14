@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags: ["*"]
+
+jobs:
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build-Vita
+        run: |
+          set -Eeuo pipefail -x
+          docker build -t mgba/vita:new .
+          docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) mgba/vita:new
+      - name: Build-3DS
+        run: |
+          docker run --rm -v $PWD:/home/mgba/src -u $(id -u):$(id -g) mgba/3ds
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          draft: false
+          prerelease: false
+          files: |
+            build-vita/psp2/mgba.vpk
+            build-3ds/3ds/mgba.cia
+            build-3ds/3ds/mgba.3dsx
