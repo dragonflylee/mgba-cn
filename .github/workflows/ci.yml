@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags: ["*"]
+
+jobs:
+  build:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          set -Eeuo pipefail -x
+          docker build -t mgba/vita .
+          docker run --rm -t -v $PWD:/home/mgba/src mgba/vita
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB}}
+        with:
+          draft: false
+          prerelease: false
+          files: build-vita/psp2/mgba.vpk
