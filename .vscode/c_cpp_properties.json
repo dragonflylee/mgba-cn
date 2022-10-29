@@ -13,7 +13,25 @@
             "compilerPath": "${VITASDK}/bin/arm-vita-eabi-g++",
             "cStandard": "c11",
             "cppStandard": "c++11",
-            "intelliSenseMode": "gcc-x64"
+            "intelliSenseMode": "gcc-arm"
+        },
+        {
+            "name": "Switch",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${DEVKITPRO}/libnx/include",
+                "${DEVKITPRO}/portlibs/switch/include",
+                "${DEVKITPRO}/portlibs/switch/include/freetype2"
+            ],
+            "defines": [
+                "__SWITCH__",
+                "EGL_NO_X11",
+                "USE_PNG"
+            ],
+            "compilerPath": "${DEVKITPRO}/devkitA64/bin/aarch64-none-elf-g++",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "gcc-arm64"
         }
     ],
     "version": 4

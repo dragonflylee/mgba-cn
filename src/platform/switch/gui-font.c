@@ -10,6 +10,11 @@
 #include <mgba-util/vfs.h>
 
 #include <GLES3/gl3.h>
+#include <switch.h>
+
+#include <ft2build.h>
+#include FT_CACHE_H
+#include FT_FREETYPE_H
 
 #define GLYPH_HEIGHT 24
 #define CELL_HEIGHT 32
@@ -62,6 +67,12 @@ static const char* const _fragmentShader =
 
 struct GUIFont {
 	GLuint font;
+	GLuint ttf;
+	FT_Library ftlibrary;
+	FTC_Manager ftcmanager;
+	FTC_CMapCache cmapcache;
+	FTC_ImageCache imagecache;
+
 	int currentGlyph;
 	GLuint program;
 	GLuint vbo;
@@ -124,6 +135,21 @@ static bool _loadTexture(const char* path) {
 	return success;
 }
 
+static FT_Error ftc_face_requester(FTC_FaceID face_id, FT_Library library,
+				   FT_Pointer request_data, FT_Face *face)
+{
+	UNUSED(face_id);
+	UNUSED(request_data);
+	PlFontData pfd;
+	plGetSharedFontByType(&pfd, PlSharedFontType_ChineseSimplified);
+	return FT_New_Memory_Face(library, pfd.address, pfd.size, 0, face);
+}
+
+static bool _loadTrueType(const char* path) {
+	UNUSED(path);
+	return true;
+}
+
 struct GUIFont* GUIFontCreate(void) {
 	struct GUIFont* font = malloc(sizeof(struct GUIFont));
 	if (!font) {
@@ -140,6 +166,32 @@ struct GUIFont* GUIFontCreate(void) {
 		GUIFontDestroy(font);
 		return NULL;
 	}
+	if (!_loadTrueType("romfs:/font.ttf")) {
+		GUIFontDestroy(font);
+		return NULL;
+	}
+
+	FT_Error ret = FT_Init_FreeType(&font->ftlibrary);
+	if (ret) {
+		GUIFontDestroy(font);
+		return NULL;
+	}
+
+	ret = FTC_Manager_New(
+		font->ftlibrary,
+		0,  /* use default */
+		0,  /* use default */
+		0,  /* use default */
+		&ftc_face_requester,  /* use our requester */
+		NULL,                 /* user data  */
+		&font->ftcmanager);
+	if (ret) {
+		GUIFontDestroy(font);
+		return NULL;
+	}
+
+	FTC_CMapCache_New(font->ftcmanager, &font->cmapcache);
+	FTC_ImageCache_New(font->ftcmanager, &font->imagecache);
 
 	font->currentGlyph = 0;
 	font->program = glCreateProgram();
@@ -258,6 +310,17 @@ struct GUIFont* GUIFontCreate(void) {
 }
 
 void GUIFontDestroy(struct GUIFont* font) {
+	FTC_FaceID face_id = (FTC_FaceID)font;
+
+	if (font->ftcmanager) {
+		FTC_Manager_RemoveFaceID(font->ftcmanager, face_id);
+		FTC_Manager_Done(font->ftcmanager);
+	}
+
+	if (font->ftlibrary) {
+		FT_Done_FreeType(font->ftlibrary);
+	}
+
 	glDeleteBuffers(1, &font->vbo);
 	glDeleteBuffers(1, &font->originVbo);
 	glDeleteBuffers(1, &font->glyphVbo);
@@ -277,8 +340,8 @@ unsigned GUIFontHeight(const struct GUIFont* font) {
 
 unsigned GUIFontGlyphWidth(const struct GUIFont* font, uint32_t glyph) {
 	UNUSED(font);
-	if (glyph > 0x7F) {
-		glyph = '?';
+	if (glyph <= 0x7F) {
+		return defaultFontMetrics[glyph].width * 2;
 	}
 	return defaultFontMetrics[glyph].width * 2;
 }
