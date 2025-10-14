@@ -19,6 +19,10 @@
 #include <GLES3/gl3.h>
 #include <GLES3/gl31.h>
 
+#include "nanovg.h"
+#define NANOVG_GLES3_IMPLEMENTATION
+#include "nanovg_gl.h"
+
 #define AUTO_INPUT 0x4E585031
 #define SAMPLES 0x400
 #define N_BUFFERS 6
@@ -109,6 +113,8 @@ static float gyroZ = 0;
 static float tiltX = 0;
 static float tiltY = 0;
 
+NVGcontext* vg;
+
 static enum ScreenMode {
 	SM_PA,
 	SM_AF,
@@ -159,6 +165,15 @@ static bool eglInit() {
 	}
 
 	eglMakeCurrent(s_display, s_surface, s_surface, s_context);
+	vg = nvgCreateGLES3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
+	if (!vg) {
+		goto _fail2;
+	}
+
+	PlFontData fd;
+	if (R_SUCCEEDED(plGetSharedFontByType(&fd, PlSharedFontType_ChineseSimplified))) {
+		nvgCreateFontMem(vg, "sans", (unsigned char*)fd.address, fd.size, 0);
+	}
 	return true;
 
 _fail2:
@@ -172,6 +187,10 @@ _fail0:
 }
 
 static void eglDeinit() {
+	if (vg) {
+		nvgDeleteGLES3(vg);
+	}
+
 	if (s_display) {
 		eglMakeCurrent(s_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 		if (s_context) {
@@ -672,9 +691,17 @@ static int _batteryState(void) {
 
 static void _guiPrepare(void) {
 	glViewport(0, 1080 - vheight, vwidth, vheight);
+
+	nvgBeginFrame(vg, vwidth, vheight, 1.0f);
+	nvgFontSize(vg, 21.0f);
+	nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+	nvgFillColor(vg, nvgRGBA(240, 240, 240, 255));
+	nvgFontFace(vg, "sans");
 }
 
 static void _guiFinish(void) {
+	nvgEndFrame(vg);
+
 	GUIFontDrawSubmit(font);
 }
 
