@@ -68,6 +68,7 @@ signals:
 	void drawingStarted();
 	void showCursor();
 	void hideCursor();
+	void contentSizeChanged(const QSize&);
 
 public slots:
 	virtual void stopDrawing() = 0;

@@ -226,6 +226,7 @@ DisplayGL::DisplayGL(const QSurfaceFormat& format, QWidget* parent)
 		emit drawingStarted();
 	});
 	connect(m_painter.get(), &PainterGL::contentSizeChanged, this, &DisplayGL::setContentSize);
+	connect(m_painter.get(), &PainterGL::contentSizeChanged, this, &Display::contentSizeChanged);
 	m_drawThread.start();
 }
 

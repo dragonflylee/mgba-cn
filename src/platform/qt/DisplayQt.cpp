@@ -145,6 +145,10 @@ void DisplayQt::paintEvent(QPaintEvent*) {
 	if (!drawSize.isValid() || drawSize.width() < 1 || drawSize.height() < 1) {
 		return;
 	}
+	if (drawSize != m_cachedSize) {
+		m_cachedSize = drawSize;
+		emit contentSizeChanged(drawSize);
+	}
 	QSize usedSize = size();
 	QSize limitSize;
 	QPoint screenOrigin(0, 0);

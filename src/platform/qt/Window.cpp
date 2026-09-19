@@ -920,14 +920,10 @@ void Window::gameStarted() {
 	for (auto action = m_platformActions.begin(); action != m_platformActions.end(); ++action) {
 		action.value()->setEnabled(m_controller->platform() == action.key());
 	}
-	QSize size(contentSize(true));
 	m_config->updateOption("lockIntegerScaling");
 	m_config->updateOption("lockAspectRatio");
 	m_config->updateOption("interframeBlending");
 	m_config->updateOption("resampleVideo");
-	if (m_savedScale > 0) {
-		resizeFrame(size * m_savedScale);
-	}
 	attachWidget(m_display.get());
 	setFocus();
 
@@ -1126,6 +1122,12 @@ void Window::reloadDisplayDriver() {
 	});
 	connect(m_display.get(), &QGBA::Display::showCursor, [this]() {
 		centralWidget()->unsetCursor();
+	});
+
+	connect(m_display.get(), &QGBA::Display::contentSizeChanged, [this](const QSize& size) {
+		if (m_savedScale > 0 && !m_config->getOption("lockFrameSize").toInt()) {
+			resizeFrame(size * m_savedScale);
+		}
 	});
 
 	m_display->configure(m_config);

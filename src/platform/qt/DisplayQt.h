@@ -73,6 +73,7 @@ private:
 	QImage m_oldBacking{nullptr};
 	QSize m_maxSize;
 	int m_maxScale = 0;
+	QSize m_cachedSize;
 	std::shared_ptr<CoreController> m_context = nullptr;
 };
 
